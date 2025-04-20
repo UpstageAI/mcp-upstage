@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "upstage-mcp-server"
+dynamic = ["version"]
+description = "An MCP server for Upstage document parsing and information extraction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = []
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "httpx>=0.24.0",
+    "python-dotenv>=1.0.0",
+    "aiofiles>=24.1.0",
+    "tenacity>=9.1.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/UpstageAI/upstage-mcp-server"
+Issues = "https://github.com/UpstageAI/upstage-mcp-server/issues"
+Repository = "https://github.com/UpstageAI/upstage-mcp-server"
+
+[project.scripts]
+upstage-mcp-server = "upstage_mcp.server:main"
+
+[tool.hatch.version]
+path = "src/upstage_mcp/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/upstage_mcp"]
