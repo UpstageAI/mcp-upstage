@@ -3,7 +3,7 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "upstage-mcp-server"
+name = "mcp-server-upstage"
 dynamic = ["version"]
 description = "An MCP server for Upstage document parsing and information extraction"
 readme = "README.md"
@@ -36,12 +36,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UpstageAI/upstage-mcp-server"
-Issues = "https://github.com/UpstageAI/upstage-mcp-server/issues"
-Repository = "https://github.com/UpstageAI/upstage-mcp-server"
+Homepage = "https://github.com/UpstageAI/mcp-server-upstage"
+Issues = "https://github.com/UpstageAI/mcp-server-upstage/issues"
+Repository = "https://github.com/UpstageAI/mcp-server-upstage"
 
 [project.scripts]
-upstage-mcp-server = "upstage_mcp.server:main"
+mcp-server-upstage = "upstage_mcp.server:main"
 
 [tool.hatch.version]
 path = "src/upstage_mcp/__init__.py"

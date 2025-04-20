@@ -44,7 +44,7 @@ async def main():
         cache_tools_list=True,  # Cache the tools list for better performance
         params={
             "command": "uvx",
-            "args": ["upstage-mcp-server"],
+            "args": ["mcp-server-upstage"],
             "env": {
                 "UPSTAGE_API_KEY": upstage_api_key,
             }

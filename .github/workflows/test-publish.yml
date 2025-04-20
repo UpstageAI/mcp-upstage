@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: test-pypi
-      url: https://test.pypi.org/p/upstage-mcp-server
+      url: https://test.pypi.org/p/mcp-server-upstage
     
     steps:
     - uses: actions/checkout@v4

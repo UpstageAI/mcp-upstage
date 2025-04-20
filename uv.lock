@@ -411,7 +411,7 @@ wheels = [
 ]
 
 [[package]]
-name = "upstage-mcp-server"
+name = "mcp-server-upstage"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
