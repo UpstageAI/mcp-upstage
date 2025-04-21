@@ -7,7 +7,7 @@ This example demonstrates how to integrate Upstage MCP Server with LangChain for
 - Python 3.10+
 - Upstage API Key (for both the MCP Server and Solar model)
 - The following Python packages:
-  - `mcp-server-upstage`
+  - `mcp-upstage`
   - `langchain-mcp-adapters`
   - `langchain-upstage`
   - `langchain`
@@ -17,7 +17,7 @@ This example demonstrates how to integrate Upstage MCP Server with LangChain for
 
 1. Install the required packages:
    ```
-   uv pip install mcp-server-upstage langchain-mcp-adapters langchain-upstage langchain uvx
+   uv pip install mcp-upstage langchain-mcp-adapters langchain-upstage langchain uvx
    ```
 
 2. Set up your environment variable:
