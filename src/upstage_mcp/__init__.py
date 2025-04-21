@@ -6,4 +6,4 @@ document digitization and information extraction capabilities.
 
 from .server import main
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
