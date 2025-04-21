@@ -36,12 +36,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UpstageAI/mcp-server-upstage"
-Issues = "https://github.com/UpstageAI/mcp-server-upstage/issues"
-Repository = "https://github.com/UpstageAI/mcp-server-upstage"
+Homepage = "https://github.com/UpstageAI/mcp-upstage"
+Issues = "https://github.com/UpstageAI/mcp-upstage/issues"
+Repository = "https://github.com/UpstageAI/mcp-upstage"
 
 [project.scripts]
-mcp-server-upstage = "upstage_mcp.server:main"
+mcp-upstage = "upstage_mcp.server:main"
 
 [tool.hatch.version]
 path = "src/upstage_mcp/__init__.py"
