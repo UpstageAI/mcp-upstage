@@ -24,13 +24,13 @@ Before using this server, ensure you have the following:
 
 ## Installation & Configuration
 
-This guide provides step-by-step instructions to set up and configure the mcp-server-upstage
+This guide provides step-by-step instructions to set up and configure the mcp-upstage
 
 ### Using `uv` (Recommended)
 
 No additional installation is required when using `uvx` as it handles execution. However, if you prefer to install the package directly:
 ```bash
-uv pip install mcp-server-upstage
+uv pip install mcp-upstage
 ```
 
 ## Configure Claude Desktop
@@ -47,9 +47,9 @@ For integration with Claude Desktop, add the following content to your `claude_d
 ```json
 {
   "mcpServers": {
-    "mcp-server-upstage": {
+    "mcp-upstage": {
       "command": "uvx",
-      "args": ["mcp-server-upstage"],
+      "args": ["mcp-upstage"],
       "env": {
         "UPSTAGE_API_KEY": "<your-api-key>"
       }
@@ -67,11 +67,11 @@ If `uvx` is not available globally, you may encounter a `Server disconnected` er
 Processing results are stored in your home directory under:
 
 - **Document Parsing Results:**  
-  `~/.mcp-server-upstage/outputs/document_parsing/`
+  `~/.mcp-upstage/outputs/document_parsing/`
 - **Information Extraction Results:**  
-  `~/.mcp-server-upstage/outputs/information_extraction/`
+  `~/.mcp-upstage/outputs/information_extraction/`
 - **Generated Schemas:**  
-  `~/.mcp-server-upstage/outputs/information_extraction/schemas/`
+  `~/.mcp-upstage/outputs/information_extraction/schemas/`
 
 ## Local/Development Setup
 
@@ -80,8 +80,8 @@ Follow these steps to set up and run the project locally:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/UpstageAI/mcp-server-upstage.git
-cd mcp-server-upstage
+git clone https://github.com/UpstageAI/mcp-upstage.git
+cd mcp-upstage
 ```
 
 ### Step 2: Set Up the Python Environment
@@ -116,12 +116,12 @@ uv pip install -e .
    ```json
    {
      "mcpServers": {
-       "mcp-server-upstage": {
+       "mcp-upstage": {
          "command": "uv",
          "args": [
            "run",
            "--directory",
-           "C:\\path\\to\\cloned\\mcp-server-upstage",
+           "C:\\path\\to\\cloned\\mcp-upstage",
            "python",
            "-m",
            "upstage_mcp.server"
@@ -133,18 +133,18 @@ uv pip install -e .
      }
    }
    ```
-   Replace `C:\\path\\to\\cloned\\mcp-server-upstage` with your actual repository path.
+   Replace `C:\\path\\to\\cloned\\mcp-upstage` with your actual repository path.
 
    **For macOS/Linux:**
    ```json
    {
      "mcpServers": {
-       "mcp-server-upstage": {
+       "mcp-upstage": {
          "command": "/Users/username/.local/bin/uv",
          "args": [
            "run",
            "--directory",
-           "/path/to/cloned/mcp-server-upstage",
+           "/path/to/cloned/mcp-upstage",
            "python",
            "-m",
            "upstage_mcp.server"
@@ -158,7 +158,7 @@ uv pip install -e .
    ```
    Replace:
    - `/Users/username/.local/bin/uv` with the output of `which uv`.
-   - `/path/to/cloned/mcp-server-upstage` with the absolute path to your local clone.
+   - `/path/to/cloned/mcp-upstage` with the absolute path to your local clone.
 
 > **Tip for macOS/Linux users:** If connection issues occur, using the full path to your uv executable can improve reliability.
 
@@ -199,8 +199,8 @@ Below is the revised troubleshooting section formatted as requested. You can cop
 
 - **Server Not Starting:**  
   Verify that your virtual environment is activated and all dependencies are installed. Additionally, review the Claude Desktop log files for errors:  
-  - **Windows:** `%APPDATA%\Claude\logs\mcp-server-mcp-server-upstage.log`  
-  - **macOS:** `~/Library/Logs/Claude/mcp-server-mcp-server-upstage.log`
+  - **Windows:** `%APPDATA%\Claude\logs\mcp-upstage.log`  
+  - **macOS:** `~/Library/Logs/Claude/mcp-upstage.log`
 
 - **Server Connection Issues:**  
   Restart Claude Desktop. Ensure that `uvx` is installed and available in your system PATH, or use its absolute path in your configuration if needed.
@@ -219,9 +219,9 @@ Below is the revised troubleshooting section formatted as requested. You can cop
 For troubleshooting, view the server logs at:
 
 - **Windows:**  
-  `%APPDATA%\Claude\logs\mcp-server-mcp-server-upstage.log`
+  `%APPDATA%\Claude\logs\mcp-upstage.log`
 - **macOS:**  
-  `~/Library/Logs/Claude/mcp-server-mcp-server-upstage.log`
+  `~/Library/Logs/Claude/mcp-upstage.log`
 
 ## Contributing
 

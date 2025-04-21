@@ -14,13 +14,13 @@ The Upstage MCP Server provides document digitization and information extraction
 - Python 3.10+
 - Upstage API Key (get from [Upstage Console](https://console.upstage.ai/api-keys))
 - OpenAI API Key (for both examples)
-- The Upstage MCP Server package (`mcp-server-upstage`)
+- The Upstage MCP Server package (`mcp-upstage`)
 
 ## Getting Started
 
 1. Install the Upstage MCP Server:
    ```
-   uv pip install mcp-server-upstage
+   uv pip install mcp-upstage
    ```
 
 2. Set up your environment variables:

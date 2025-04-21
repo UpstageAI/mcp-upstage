@@ -20,7 +20,7 @@ API_KEY = os.environ.get("UPSTAGE_API_KEY")
 if not API_KEY:
     raise ValueError("UPSTAGE_API_KEY not set in environment variables")
 
-mcp = FastMCP("mcp-server-upstage")
+mcp = FastMCP("mcp-upstage")
 
 # Create output directories
 document_parser.setup_output_directories()
