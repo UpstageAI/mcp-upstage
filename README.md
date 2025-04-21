@@ -1,5 +1,5 @@
 
-# Upstage MCP Server
+# Upstage MCP
 
 > A Model Context Protocol (MCP) server for Upstage AI's document digitization and information extraction capabilities
 
