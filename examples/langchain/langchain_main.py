@@ -47,7 +47,7 @@ async def main():
     # Set up parameters for the MCP server
     server_params = StdioServerParameters(
         command="uvx",
-        args=["mcp-server-upstage"],
+        args=["mcp-upstage"],
         env={
             "UPSTAGE_API_KEY": upstage_api_key
         }

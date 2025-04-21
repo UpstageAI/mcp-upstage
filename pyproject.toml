@@ -3,7 +3,7 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-server-upstage"
+name = "mcp-upstage"
 dynamic = ["version"]
 description = "An MCP server for Upstage document parsing and information extraction"
 readme = "README.md"

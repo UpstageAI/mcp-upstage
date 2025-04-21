@@ -8,7 +8,7 @@ This example demonstrates how to use OpenAI's Agents SDK to connect with the Ups
 - Upstage API Key
 - OpenAI API Key
 - The following Python packages:
-  - `mcp-server-upstage`
+  - `mcp-upstage`
   - `openai`
   - `openai-agents`
   - `uvx`
@@ -17,7 +17,7 @@ This example demonstrates how to use OpenAI's Agents SDK to connect with the Ups
 
 1. Install the required packages:
    ```
-   uv pip install mcp-server-upstage openai openai-agents uvx
+   uv pip install mcp-upstage openai openai-agents uvx
    ```
 
 2. Set up your environment variables:
