@@ -141,7 +141,8 @@ async def generate_schema(
     async with httpx.AsyncClient(timeout=httpx.Timeout(REQUEST_TIMEOUT)) as client:
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "x-upstage-client": "mcp",
+            "Content-Type": "application/json",
         }
         
         # Prepare request data in OpenAI format
@@ -209,7 +210,8 @@ async def extract_with_schema(
     async with httpx.AsyncClient(timeout=httpx.Timeout(REQUEST_TIMEOUT)) as client:
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "x-upstage-client": "mcp",
+            "Content-Type": "application/json",
         }
         
         # Prepare request data in OpenAI format
