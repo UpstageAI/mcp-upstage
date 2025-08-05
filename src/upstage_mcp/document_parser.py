@@ -73,7 +73,10 @@ async def parse_document_api(
     try:
         # Initialize API client with timeout
         async with httpx.AsyncClient(timeout=httpx.Timeout(REQUEST_TIMEOUT)) as client:
-            headers = {"Authorization": f"Bearer {api_key}"}
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "x-upstage-client": "mcp",
+            }
             
             if ctx:
                 await ctx.report_progress(30, 100)
