@@ -143,8 +143,6 @@ async def parse_and_save_document(
     
     # Add file path info to response if save succeeded
     if response_file:
-        response_text += f"\n\nThe full response has been saved to {response_file} for your reference."
-    else:
-        response_text += "\n\nNote: Could not save the full response to disk."
-        
-    return response_text
+        return response_text + f"\n\nThe full response has been saved to {response_file} for your reference."
+
+    return response_text + "\n\nNote: Could not save the full response to disk."
