@@ -45,9 +45,6 @@ async def _parse_document_api(
     # Initialize progress reporting if context provided
     if ctx:
         ctx.info(f"Starting to process {file_path}")
-        await ctx.report_progress(10, 100)
-    
-    if ctx:
         await ctx.report_progress(30, 100)
     
     # Process document
