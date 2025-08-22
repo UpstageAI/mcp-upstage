@@ -22,10 +22,8 @@ if not API_KEY:
 
 mcp = FastMCP("mcp-upstage")
 
-# Create output directories
-document_parser.setup_output_directories()
-info_extractor.setup_output_directories()
-output_dir = Path(__file__).parent / "outputs"
+# Output directories are created when modules are imported
+output_dir = Path.home() / ".mcp-upstage" / "outputs"
 print(f"Output directories created at: {output_dir}")
 
 # Document Parsing Tool

@@ -1,12 +1,8 @@
 """Basic tests for the Upstage MCP Server."""
 import unittest
-import os
-import sys
-
-# Add src to path for testing without installation
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from upstage_mcp import __version__
+
 
 class TestUpstageServer(unittest.TestCase):
     """Test the Upstage MCP Server."""
