@@ -1,0 +1,55 @@
+name: 'Check and Close Invalid PR to Main'
+
+on:
+  pull_request_target:
+    types:
+      - opened
+    branches:
+      - main
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is from upstream/dev
+        id: check_source
+        if: github.head_ref == 'dev' && !github.event.pull_request.head.repo.fork
+        run: echo "is_valid=true" >> $GITHUB_OUTPUT
+
+      - name: Allow valid PR
+        if: steps.check_source.outputs.is_valid == 'true'
+        run: echo "✅ PR from upstream/dev to main is allowed. Continuing..."
+
+      - name: Handle invalid PR
+        if: steps.check_source.outputs.is_valid != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            await github.rest.issues.createComment({
+              owner: owner,
+              repo: repo,
+              issue_number: prNumber,
+              body: `
+                ### ❌ 잘못된 Pull Request
+                안녕하세요! **main** 브랜치로 직접 PR을 보내는 것은 정책상 금지되어 있습니다.
+
+                - **기능 개발, 버그 수정 등**의 작업은 **dev** 브랜치를 대상으로 PR을 보내주세요.
+                - **main** 브랜치는 **dev** 브랜치의 내용이 충분히 검증된 후, 릴리스 담당자에 의해서만 병합됩니다.
+
+                이 PR은 자동으로 닫힙니다. 브랜치 대상을 변경하여 다시 PR을 생성해주세요. 감사합니다. 😄
+              `
+            });
+
+            await github.rest.pulls.update({
+              owner: owner,
+              repo: repo,
+              pull_number: prNumber,
+              state: 'closed'
+            });
+
+            core.setFailed("This PR was automatically closed because it targets the main branch incorrectly.");
