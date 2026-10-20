@@ -170,10 +170,17 @@ The server exposes two primary tools for AI models:
 
 1. **Document Parsing (`parse_document`):**
    - **Description:** Processes documents and extracts content while preserving structure.
-   - **Parameter:**  
-     `file_path` – the path to the document to be processed.
+   - **Parameters:**  
+     `file_path` – the path to the document to be processed;  
+     `output_formats` (optional) – output formats such as `html`, `text`, `markdown`;  
+     `mode` (default `standard`) – `standard`, `enhanced` or `auto`. Use `enhanced` for complex tables, charts, handwriting or low-quality scans; `auto` lets the API decide per page;  
+     `ocr` (default `force`) – `force` always runs OCR, `auto` uses embedded text of digital documents when possible;  
+     `model` (default `document-parse`) – the latest model, or a dated version such as `document-parse-260930` to pin it.
+   - **Applied mode:** The response ends with the model and per-mode page usage reported by the API, e.g. `Processed by document-parse-260930 | usage: {"pages": 1, "enhanced": [1]}`. If the requested `standard`/`enhanced` mode was not applied, a `WARNING` line follows.
+   - **Cost note:** `enhanced` (and pages that `auto` routes to enhanced) is billed at a higher per-page price than `standard` and is slower. Keep the default `standard` unless the document needs it.
    - **Example Query:**  
-     *"Can you parse the document at `C:\Users\username\Documents\contract.pdf` and provide a summary?"*
+     *"Can you parse the document at `C:\Users\username\Documents\contract.pdf` and provide a summary?"*  
+     *"Parse the scanned form at `~/Documents/form.pdf` in enhanced mode."*
 
 2. **Information Extraction (`extract_information`):**
    - **Description:** Extracts structured information from documents based on predefined or auto-generated schemas.
