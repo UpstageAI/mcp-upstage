@@ -11,7 +11,7 @@ import pytest
 from mcp.server.fastmcp import Context
 from tenacity import wait_none
 
-from upstage_mcp import document_parser
+from upstage_mcp import document_parser, info_extractor
 from upstage_mcp.utils import api_client
 
 API_URL = document_parser.DOCUMENT_DIGITIZATION_URL
@@ -84,7 +84,8 @@ class TestParseOptionsSentToApi:
             )
 
             data = mock_post.call_args.kwargs["data"]
-            assert data["mode"] == "standard"
+            # standard is the API default; the field is omitted for compatibility
+            assert "mode" not in data
             assert data["ocr"] == "force"
             assert data["model"] == "document-parse"
 
@@ -105,6 +106,18 @@ class TestParseOptionsSentToApi:
             assert data["mode"] == "enhanced"
             assert data["ocr"] == "auto"
             assert data["model"] == "document-parse-260930"
+
+
+    @pytest.mark.asyncio
+    async def test_should_send_auto_mode(self, mock_api_key: str, temp_pdf_file: Path):
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = _response(200, _api_body({"pages": 1, "enhanced": [1]}))
+
+            await document_parser.parse_and_save_document(
+                file_path=str(temp_pdf_file), api_key=mock_api_key, mode="auto"
+            )
+
+            assert mock_post.call_args.kwargs["data"]["mode"] == "auto"
 
 
 class TestAppliedModeReporting:
@@ -169,7 +182,36 @@ class TestAppliedModeReporting:
             )
 
         assert "Processed by unknown model | usage: not reported" in text
-        assert "WARNING: Could not confirm that mode 'standard' was applied" in text
+        assert "WARNING" not in text
+        assert "Could not confirm" not in text
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("usage", [{"pages": 3}, None])
+    async def test_should_note_unconfirmed_enhanced_without_per_mode_usage(
+        self, mock_api_key: str, temp_pdf_file: Path, usage
+    ):
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = _response(200, _api_body(usage))
+
+            text = await document_parser.parse_and_save_document(
+                file_path=str(temp_pdf_file), api_key=mock_api_key, mode="enhanced"
+            )
+
+        assert "Note: Could not confirm mode 'enhanced' was applied" in text
+        assert "WARNING" not in text
+
+    @pytest.mark.asyncio
+    async def test_should_stay_silent_for_standard_without_per_mode_usage(self, mock_api_key: str, temp_pdf_file: Path):
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = _response(200, _api_body({"pages": 3}))
+
+            text = await document_parser.parse_and_save_document(
+                file_path=str(temp_pdf_file), api_key=mock_api_key
+            )
+
+        assert 'Processed by document-parse-260930 | usage: {"pages": 3}' in text
+        assert "WARNING" not in text
+        assert "Could not confirm" not in text
 
     @pytest.mark.asyncio
     async def test_should_not_escape_non_ascii_content(self, mock_api_key: str, temp_pdf_file: Path):
@@ -216,13 +258,16 @@ class TestContextLogging:
 
 
 class TestRetry:
-    """Only transient failures (connection errors, 429, 5xx) are retried."""
+    """Only failures where the request was not processed (connect errors, 429, 503) are retried."""
 
     @pytest.mark.asyncio
-    async def test_should_retry_on_503_then_succeed(self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait):
+    @pytest.mark.parametrize("status_code", [429, 503])
+    async def test_should_retry_when_request_not_processed(
+        self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait, status_code: int
+    ):
         with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
             mock_post.side_effect = [
-                _response(503, {"error": "unavailable"}),
+                _response(status_code, {"error": "try again"}),
                 _response(200, _api_body({"pages": 1, "standard": [1]})),
             ]
 
@@ -234,10 +279,29 @@ class TestRetry:
         assert "Processed by document-parse-260930" in text
 
     @pytest.mark.asyncio
-    async def test_should_retry_on_connection_error(self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait):
+    @pytest.mark.parametrize("status_code", [400, 500, 502, 504])
+    async def test_should_not_retry_when_server_may_have_processed(
+        self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait, mock_ctx: MagicMock, status_code: int
+    ):
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = _response(status_code, {"error": "failed"})
+
+            with pytest.raises(Exception, match=f"HTTP error from Upstage API: {status_code}"):
+                await document_parser.parse_and_save_document(
+                    file_path=str(temp_pdf_file), api_key=mock_api_key, ctx=mock_ctx
+                )
+
+        assert mock_post.call_count == 1
+        mock_ctx.error.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("error_cls", [httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout])
+    async def test_should_retry_on_pre_send_failure(
+        self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait, error_cls
+    ):
         with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
             mock_post.side_effect = [
-                httpx.ConnectError("boom", request=httpx.Request("POST", API_URL)),
+                error_cls("boom", request=httpx.Request("POST", API_URL)),
                 _response(200, _api_body({"pages": 1, "standard": [1]})),
             ]
 
@@ -248,11 +312,26 @@ class TestRetry:
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_should_give_up_after_three_5xx(self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait):
+    @pytest.mark.parametrize("error_cls", [httpx.ReadTimeout, httpx.ReadError, httpx.RemoteProtocolError])
+    async def test_should_not_retry_after_request_was_sent(
+        self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait, error_cls
+    ):
         with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = _response(500, {"error": "internal"})
+            mock_post.side_effect = error_cls("boom", request=httpx.Request("POST", API_URL))
 
-            with pytest.raises(Exception, match="HTTP error from Upstage API: 500"):
+            with pytest.raises(Exception, match="Request error connecting to Upstage API"):
+                await document_parser.parse_and_save_document(
+                    file_path=str(temp_pdf_file), api_key=mock_api_key
+                )
+
+        assert mock_post.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_should_give_up_after_three_attempts(self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait):
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = _response(503, {"error": "unavailable"})
+
+            with pytest.raises(Exception, match="HTTP error from Upstage API: 503"):
                 await document_parser.parse_and_save_document(
                     file_path=str(temp_pdf_file), api_key=mock_api_key
                 )
@@ -260,19 +339,46 @@ class TestRetry:
         assert mock_post.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_should_not_retry_on_400(
+    async def test_should_fail_without_retry_on_non_json_success_response(
         self, mock_api_key: str, temp_pdf_file: Path, no_retry_wait, mock_ctx: MagicMock
     ):
         with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = _response(400, {"error": "bad request"})
+            mock_post.return_value = httpx.Response(
+                200, content=b"<html>gateway page</html>", request=httpx.Request("POST", API_URL)
+            )
 
-            with pytest.raises(Exception, match="HTTP error from Upstage API: 400"):
+            with pytest.raises(Exception, match="Error during document parsing"):
                 await document_parser.parse_and_save_document(
                     file_path=str(temp_pdf_file), api_key=mock_api_key, ctx=mock_ctx
                 )
 
         assert mock_post.call_count == 1
         mock_ctx.error.assert_awaited_once()
+
+
+class TestInfoExtractorContextLogging:
+    """info_extractor must await the async Context logging methods."""
+
+    @pytest.mark.asyncio
+    async def test_should_await_info_logs_during_extraction(
+        self, mock_api_key: str, temp_pdf_file: Path, mock_ctx: MagicMock
+    ):
+        schema_response = {"choices": [{"message": {"content": json.dumps(
+            {"json_schema": {"type": "object", "properties": {"total": {"type": "string"}}}}
+        )}}]}
+        extraction_response = {"choices": [{"message": {"content": json.dumps({"total": "10,000원"})}}]}
+
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.side_effect = [_response(200, schema_response), _response(200, extraction_response)]
+
+            text = await info_extractor.extract_information_from_file(
+                file_path=str(temp_pdf_file), api_key=mock_api_key, ctx=mock_ctx, auto_generate_schema=True
+            )
+
+        assert '"total": "10,000원"' in text
+        # Every info() call must have been awaited (an un-awaited call is counted but not awaited).
+        assert mock_ctx.info.call_count >= 5
+        assert mock_ctx.info.await_count == mock_ctx.info.call_count
 
 
 class TestServerTool:

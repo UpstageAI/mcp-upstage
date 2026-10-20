@@ -67,10 +67,14 @@ async def _parse_document_api(
         files = {"document": file}
         data = {
             "ocr": ocr,
-            "mode": mode,
             "base64_encoding": "['table']",
             "model": model
         }
+        
+        # The API defaults to standard; only send mode when it differs so that
+        # older models or gateways that do not accept the field keep working.
+        if mode != DEFAULT_MODE:
+            data["mode"] = mode
         
         # Add output_formats if provided
         if output_formats:
@@ -133,6 +137,7 @@ def _format_processing_info(result: Dict[str, Any], requested_mode: str) -> str:
     
     Reports the model and usage returned by the API, and warns when the
     requested mode (standard or enhanced) is not reflected in the usage.
+    If the usage has no per-mode keys, a note is added for enhanced only.
     
     Args:
         result: The API response
@@ -149,19 +154,24 @@ def _format_processing_info(result: Dict[str, Any], requested_mode: str) -> str:
     if requested_mode == "auto":
         return info
 
-    if not isinstance(usage, dict):
+    applied_modes = (
+        [key for key in USAGE_MODE_KEYS if usage.get(key)] if isinstance(usage, dict) else []
+    )
+
+    # No per-mode breakdown (e.g. older pinned models): the applied mode cannot be confirmed.
+    if not applied_modes:
+        if requested_mode == DEFAULT_MODE:
+            return info
         return info + (
-            f"\nWARNING: Could not confirm that mode '{requested_mode}' was applied "
-            "because the API response did not include usage information."
+            f"\nNote: Could not confirm mode '{requested_mode}' was applied "
+            "because the API response has no per-mode usage."
         )
 
-    applied_modes = [key for key in USAGE_MODE_KEYS if usage.get(key)]
     other_modes = [key for key in applied_modes if key != requested_mode]
     if requested_mode not in applied_modes or other_modes:
-        applied = ", ".join(applied_modes) if applied_modes else "none reported"
         return info + (
             f"\nWARNING: Requested mode '{requested_mode}' was not applied as requested "
-            f"(applied: {applied}). Check the usage above."
+            f"(applied: {', '.join(applied_modes)}). Check the usage above."
         )
 
     return info

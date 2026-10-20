@@ -11,12 +11,26 @@ from upstage_mcp.utils.constants import MINUTE
 REQUEST_TIMEOUT = 5 * MINUTE
 
 
+# Failures where the request never reached the server, so retrying cannot
+# cause a second (billed) processing of the same document.
+RETRYABLE_REQUEST_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
+# Responses that mean the server did not process the request.
+RETRYABLE_STATUS_CODES = (429, 503)
+
+
 def _is_retryable_error(exc: BaseException) -> bool:
-    """Retry only transient failures: connection errors, 429 and 5xx responses."""
+    """
+    Decide whether a failed request is safe to retry.
+    
+    The parsing endpoint is paid and not idempotent: a read timeout, a dropped
+    connection or a 500/502/504 may arrive after the server already processed
+    (and billed) the document. Only failures before the request was sent
+    (connect errors, connect/pool timeouts) and explicit "not processed"
+    responses (429, 503) are retried.
+    """
     if isinstance(exc, httpx.HTTPStatusError):
-        status = exc.response.status_code
-        return status == 429 or status >= 500
-    return isinstance(exc, httpx.RequestError)
+        return exc.response.status_code in RETRYABLE_STATUS_CODES
+    return isinstance(exc, RETRYABLE_REQUEST_ERRORS)
 
 
 @retry(
@@ -49,8 +63,10 @@ async def make_api_request(
     """
     Make an API request with retry logic, mandatory Upstage headers, and error handling.
     
-    Connection errors, 429 and 5xx responses are retried (up to 3 attempts).
-    Other 4xx responses fail immediately.
+    Only failures where the request was not processed are retried (up to 3
+    attempts): connect errors, connect/pool timeouts, and 429/503 responses.
+    Read timeouts, other 5xx and 4xx responses fail immediately, because the
+    server may already have processed and billed the request.
     
     Args:
         url: API endpoint URL
