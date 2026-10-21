@@ -230,6 +230,108 @@ For troubleshooting, view the server logs at:
 - **macOS:**  
   `~/Library/Logs/Claude/mcp-upstage.log`
 
+## Release / Deployment (Maintainers)
+
+This repository publishes a Python package. MCP clients run it locally over stdio; the workflows do not deploy a hosted HTTP server.
+
+### Deployment triggers and credentials
+
+| Destination | Trigger | Workflow | GitHub environment | Secret |
+| --- | --- | --- | --- | --- |
+| TestPyPI | Push to `dev` | [Publish to TestPyPI](.github/workflows/test-publish.yml) | `test-pypi` | `TEST_PYPI_API_TOKEN` |
+| PyPI | Publish a GitHub Release | [Publish to PyPI](.github/workflows/python-publish.yml) | `pypi` | `PYPI_API_TOKEN` |
+
+Configure the secrets as GitHub Actions repository secrets or in the corresponding environment. These workflows currently use API tokens, not Trusted Publishing. `UPSTAGE_API_KEY` is required to run the MCP server and call Upstage APIs; it is separate from the publishing credentials.
+
+Merging into `main` or pushing a tag alone does **not** publish to PyPI. A draft release does not publish either. Publishing a GitHub Release, including a prerelease, triggers the PyPI workflow. Use TestPyPI to validate a package before a public release.
+
+### 1. Prepare a new package version
+
+1. Fetch the latest `main` and `dev`, reconcile changes, and review the commits included in the release.
+2. Set `__version__` in [src/upstage_mcp/__init__.py](src/upstage_mcp/__init__.py). Hatch reads the package version from this file; the release tag does not set it. Use a patch increment for fixes and a minor increment for new functionality, consistent with recent releases.
+3. Run `uv lock` after changing the version or dependencies, and commit the updated `uv.lock` when it changes.
+4. Use a version whose distribution filenames have not already been uploaded to the target index. PyPI and TestPyPI cannot overwrite existing distribution files. Additional package changes after a TestPyPI upload need a new version before another upload; do not reuse the same version for different artifacts on the same index.
+
+The current TestPyPI workflow runs on **every** push to `dev`, including documentation-only changes. For a documentation-only commit that must not publish, GitHub supports [`[skip ci]`](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs) in the commit message. This also skips `push`/`pull_request` CI, so document the manual checks in the PR and do not use it for package code changes. Required skipped checks can remain pending and block merging; do not bypass branch protection. The `pull_request_target` branch-policy check still runs.
+
+### 2. Validate and publish to TestPyPI
+
+Run these checks from the repository root before pushing release changes to `dev`:
+
+```bash
+uv lock --check
+uv sync --frozen --extra dev
+UPSTAGE_API_KEY=dummy uv run --frozen pytest -q
+uv build
+```
+
+A dummy key is sufficient for the automated tests, but not for real API calls. [CI](.github/workflows/ci.yml) also tests fresh installations without the lockfile on Python 3.10 and 3.12, plus a locked installation.
+
+After pushing to `dev`, confirm both CI and `Publish to TestPyPI` succeeded for the intended commit, and check that the expected wheel and source distribution exist on [TestPyPI](https://test.pypi.org/project/mcp-upstage/). CI and publishing run independently; a successful upload does not prove CI passed. Inspect the built package and test its MCP behavior before promoting it.
+
+### 3. Promote `dev` to `main`
+
+Create a release PR with `dev` as the head and `main` as the base. The [branch-policy workflow](.github/workflows/protect-main.yml) automatically closes newly opened PRs to `main` unless their head is this repository's `dev` branch.
+
+```bash
+gh pr create --base main --head dev --title "release: <version>" --body-file release-notes.md
+```
+
+Prepare `release-notes.md` with the included changes and validation evidence. If your environment sets `SLACK_BOT_PERSONA`, also pass `--label "$SLACK_BOT_PERSONA"` when creating the PR.
+
+Wait for the release PR's checks and required reviews to pass, then merge it. Verify that the merged commit contains exactly the version and changes you intend to publish. CI is not a dependency of the PyPI publishing workflow, so complete this verification **before** publishing the release.
+
+### 4. Publish the GitHub Release
+
+Use the merged release PR's exact commit as the tag target. Replace the placeholders below; the version must match `__version__` and must be unused on PyPI. Existing releases use tags without a `v` prefix, such as `0.2.0`.
+
+```bash
+RELEASE_VERSION="<new-version>"
+RELEASE_PR="<merged-release-pr-number>"
+RELEASE_SHA=$(gh pr view "$RELEASE_PR" --json mergeCommit --jq '.mergeCommit.oid')
+
+git fetch origin main --tags
+git show "$RELEASE_SHA:src/upstage_mcp/__init__.py"
+
+# Run only after confirming the commit and version above.
+gh release create "$RELEASE_VERSION" \
+  --target "$RELEASE_SHA" \
+  --title "Upstage MCP v$RELEASE_VERSION" \
+  --notes-file release-notes.md \
+  --latest
+```
+
+Confirm that the tag points to the intended commit. If the tag already exists, `--target` does not move it; verify the existing tag before publishing. Do not retag a published release to repair a package.
+
+### 5. Verify the public package
+
+1. In [GitHub Actions](https://github.com/UpstageAI/mcp-upstage/actions), wait for **both** `build` and `publish` in `Publish to PyPI` to finish successfully. Check the run's commit SHA against the release commit; a queued run or a published GitHub Release alone is not deployment proof.
+2. Confirm the version, wheel, and source distribution on [PyPI](https://pypi.org/project/mcp-upstage/).
+3. Install the exact version from the public index, without loading the local checkout:
+
+```bash
+uv run --no-project --index-url https://pypi.org/simple \
+  --refresh-package mcp-upstage --with "mcp-upstage==$RELEASE_VERSION" \
+  python -c 'from importlib.metadata import version; print(version("mcp-upstage"))'
+```
+
+Configure an MCP client with the following command and arguments, replacing `<version>` with the released version. Supply a real `UPSTAGE_API_KEY` through the client's environment settings.
+
+```json
+{
+  "command": "uvx",
+  "args": ["--index-url", "https://pypi.org/simple", "--refresh-package", "mcp-upstage", "mcp-upstage==<version>"]
+}
+```
+
+Restart the client, initialize the MCP connection, and list tools. Confirm `parse_document` and `extract_information` are available and the parsing schema exposes `mode`, `ocr`, and `model`.
+
+For an end-to-end check, use a small synthetic document with known values. Verify default/standard, enhanced, and auto parsing, the API-reported model and per-mode `usage`, information extraction, and the saved result files under `~/.mcp-upstage/outputs/`. Test automatic schema generation and an explicit schema. These calls use the real Upstage API and incur normal usage charges; enhanced processing can cost more than standard. Import or tool-list checks alone do not verify document processing.
+
+**Known limitation observed with `mcp-upstage 0.2.0` and `mcp 1.30.0`:** passing a JSON object encoded as a `schema_json` string fails MCP argument validation before the extraction API is called. Automatic schema generation and `schema_path` with a JSON schema file were verified successfully. Record this limitation when validating 0.2.0; do not count the failing path as passed.
+
+If publishing fails, inspect the failed job before retrying. Check token access, the version, and whether either distribution was already uploaded. Do not assume a failed workflow means no files reached the index. For a faulty published package, fix the code and release a new version rather than overwriting the existing one.
+
 ## Contributing
 
 Contributions are welcome! If you wish to enhance the project or add new features, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
