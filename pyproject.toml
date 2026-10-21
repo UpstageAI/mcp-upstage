@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "mcp[cli]>=1.6.0",
+    "mcp[cli]>=1.6.0,<2",
     "httpx>=0.24.0",
     "python-dotenv>=1.0.0",
     "aiofiles>=24.1.0",
