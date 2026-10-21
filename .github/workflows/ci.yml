@@ -18,6 +18,7 @@ jobs:
     # (e.g. mcp 2.x removing mcp.server.fastmcp) break CI, not users.
     name: Fresh install (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -46,3 +47,26 @@ jobs:
       env:
         UPSTAGE_API_KEY: dummy
       run: pytest -q
+
+  locked:
+    # Runs against the committed uv.lock and fails if it is out of date with pyproject.toml.
+    name: Locked install (uv.lock)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Check lockfile is up to date
+      run: uv lock --check
+
+    - name: Install from lockfile
+      run: uv sync --frozen --extra dev
+
+    - name: Run tests
+      env:
+        UPSTAGE_API_KEY: dummy
+      run: uv run --frozen pytest -q

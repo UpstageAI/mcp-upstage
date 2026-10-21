@@ -1,7 +1,7 @@
 """MCP server for Upstage AI services."""
 
 import os
-from typing import Annotated, Optional, List
+from typing import Annotated, Literal, Optional, List
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -31,6 +31,20 @@ print(f"Output directories created at: {output_dir}")
 async def parse_document(
     file_path: Annotated[str, Field(description="Path to the document file to be processed")],
     output_formats: Annotated[Optional[List[str]], Field(description="Output formats (e.g., 'html', 'text', 'markdown')")] = None,
+    mode: Annotated[Literal["standard", "enhanced", "auto"], Field(description=(
+        "Parsing mode. 'standard' (default): fast and cheapest, good for ordinary text-centric documents. "
+        "'enhanced': use for complex tables, charts, handwriting or low-quality scans; "
+        "it costs more per page and is slower. "
+        "'auto': let the API decide per page whether enhanced processing is needed."
+    ))] = "standard",
+    ocr: Annotated[Literal["auto", "force"], Field(description=(
+        "OCR mode. 'force' (default): always run OCR. "
+        "'auto': use the embedded text of digital documents and run OCR only when needed."
+    ))] = "force",
+    model: Annotated[str, Field(description=(
+        "Document Parse model name. Use the default 'document-parse' for the latest version, "
+        "or a dated version such as 'document-parse-260930' to pin it."
+    ))] = "document-parse",
     ctx: Context = None
 ) -> str:
     """Parse a document using Upstage AI's document digitization API.
@@ -39,13 +53,21 @@ async def parse_document(
     including PDFs, images, and Office files. It preserves the original formatting
     and layout while converting the document into a structured format.
     
+    Use mode='enhanced' for documents with complex tables, charts, handwriting or
+    low-quality scans (higher cost, slower), or mode='auto' to let the API decide
+    per page. The response ends with the model and per-mode page usage reported
+    by the API, plus a WARNING line if the requested mode was not applied.
+    
     Supported file formats include: PDF, JPEG, PNG, TIFF, and other common document formats.
     """
     return await document_parser.parse_and_save_document(
         file_path=file_path,
         api_key=API_KEY,
         ctx=ctx,
-        output_formats=output_formats
+        output_formats=output_formats,
+        mode=mode,
+        ocr=ocr,
+        model=model
     )
 
 

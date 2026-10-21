@@ -113,7 +113,7 @@ async def _generate_schema(
         Generated schema for information extraction
     """
     if ctx:
-        ctx.info("Connecting to schema generation API")
+        await ctx.info("Connecting to schema generation API")
     
     # Prepare request data in OpenAI format
     request_data = {
@@ -177,7 +177,7 @@ async def _extract_with_schema(
         Extracted information as a dictionary
     """
     if ctx:
-        ctx.info("Connecting to information extraction API")
+        await ctx.info("Connecting to information extraction API")
     
     # Prepare request data in OpenAI format
     request_data = {
@@ -250,12 +250,12 @@ async def extract_information_from_file(
         _validate_file_for_extraction(file_path)
     except (FileNotFoundError, ValueError) as e:
         if ctx:
-            ctx.error(str(e))
+            await ctx.error(str(e))
         return f"Error: {str(e)}"
     
     try:
         if ctx:
-            ctx.info(f"Starting to process {file_path}")
+            await ctx.info(f"Starting to process {file_path}")
             await ctx.report_progress(5, 100)
         
         # Get file MIME type
@@ -263,7 +263,7 @@ async def extract_information_from_file(
         
         # Encode file to base64
         if ctx:
-            ctx.info("Encoding file")
+            await ctx.info("Encoding file")
         file_base64 = _encode_file_to_base64(file_path)
         if ctx:
             await ctx.report_progress(15, 100)
@@ -280,7 +280,7 @@ async def extract_information_from_file(
                 return f"Error: Invalid JSON in schema_json"
         elif schema_path:
             if ctx:
-                ctx.info(f"Loading schema from {schema_path}")
+                await ctx.info(f"Loading schema from {schema_path}")
             try:
                 schema = await _load_schema_async(schema_path)
                 if not schema:
@@ -289,7 +289,7 @@ async def extract_information_from_file(
                 return f"Error loading schema: {str(e)}"
         elif auto_generate_schema:
             if ctx:
-                ctx.info("Auto-generating schema from document")
+                await ctx.info("Auto-generating schema from document")
             try:
                 # Generate schema
                 schema = await _generate_schema(file_base64, mime_type, api_key, ctx)
@@ -300,7 +300,7 @@ async def extract_information_from_file(
                 await async_json_dump(schema, schema_file, indent=2)
                 
                 if ctx:
-                    ctx.info(f"Generated schema saved to {schema_file}")
+                    await ctx.info(f"Generated schema saved to {schema_file}")
             except Exception as e:
                 return f"Error generating schema: {str(e)}"
         
@@ -310,7 +310,7 @@ async def extract_information_from_file(
         
         if ctx:
             await ctx.report_progress(50, 100)
-            ctx.info("Extracting information with schema")
+            await ctx.info("Extracting information with schema")
         
         # Extract information using schema
         try:
@@ -323,7 +323,7 @@ async def extract_information_from_file(
             
             if ctx:
                 await ctx.report_progress(100, 100)
-                ctx.info(f"Extraction complete. Results saved to {result_file}")
+                await ctx.info(f"Extraction complete. Results saved to {result_file}")
             
             # Return results with metadata
             response = {
@@ -335,12 +335,12 @@ async def extract_information_from_file(
                 }
             }
             
-            return json.dumps(response, indent=2)
+            return json.dumps(response, indent=2, ensure_ascii=False)
         except Exception as e:
             return f"Error extracting information: {str(e)}"
             
     except Exception as e:
         error_msg = f"Error extracting information: {str(e)}"
         if ctx:
-            ctx.error(error_msg)
+            await ctx.error(error_msg)
         return error_msg
