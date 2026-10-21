@@ -191,9 +191,6 @@ The server exposes two primary tools for AI models:
    - **Example Query:**  
      *"Extract the invoice number, date, and total from `C:\Users\username\Documents\invoice.pdf`."*
 
-Below is the revised troubleshooting section formatted as requested. You can copy and paste the following Markdown directly into your README:
-
-
 ## Troubleshooting
 
 ### Common Issues
@@ -252,8 +249,6 @@ Merging into `main` or pushing a tag alone does **not** publish to PyPI. A draft
 3. Run `uv lock` after changing the version or dependencies, and commit the updated `uv.lock` when it changes.
 4. Use a version whose distribution filenames have not already been uploaded to the target index. PyPI and TestPyPI cannot overwrite existing distribution files. Additional package changes after a TestPyPI upload need a new version before another upload; do not reuse the same version for different artifacts on the same index.
 
-The current TestPyPI workflow runs on **every** push to `dev`, including documentation-only changes. For a documentation-only commit that must not publish, GitHub supports [`[skip ci]`](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs) in the commit message. This also skips `push`/`pull_request` CI, so document the manual checks in the PR and do not use it for package code changes. Required skipped checks can remain pending and block merging; do not bypass branch protection. The `pull_request_target` branch-policy check still runs.
-
 ### 2. Validate and publish to TestPyPI
 
 Run these checks from the repository root before pushing release changes to `dev`:
@@ -274,10 +269,10 @@ After pushing to `dev`, confirm both CI and `Publish to TestPyPI` succeeded for 
 Create a release PR with `dev` as the head and `main` as the base. The [branch-policy workflow](.github/workflows/protect-main.yml) automatically closes newly opened PRs to `main` unless their head is this repository's `dev` branch.
 
 ```bash
-gh pr create --base main --head dev --title "release: <version>" --body-file release-notes.md
+gh pr create --base main --head dev --title "release: <version>"
 ```
 
-Prepare `release-notes.md` with the included changes and validation evidence. If your environment sets `SLACK_BOT_PERSONA`, also pass `--label "$SLACK_BOT_PERSONA"` when creating the PR.
+Describe the included changes and validation results in the PR description.
 
 Wait for the release PR's checks and required reviews to pass, then merge it. Verify that the merged commit contains exactly the version and changes you intend to publish. CI is not a dependency of the PyPI publishing workflow, so complete this verification **before** publishing the release.
 
@@ -297,7 +292,7 @@ git show "$RELEASE_SHA:src/upstage_mcp/__init__.py"
 gh release create "$RELEASE_VERSION" \
   --target "$RELEASE_SHA" \
   --title "Upstage MCP v$RELEASE_VERSION" \
-  --notes-file release-notes.md \
+  --generate-notes \
   --latest
 ```
 
